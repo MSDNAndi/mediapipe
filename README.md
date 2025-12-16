@@ -77,6 +77,16 @@ provided on an as-is basis.
 
 For more on the legacy solutions, see the [documentation](https://github.com/google/mediapipe/tree/master/docs/solutions).
 
+## Building Python Wheels
+
+To build prebuilt MediaPipe Python wheels for distribution, see the
+[wheel building guide](BUILDING_WHEELS.md). The guide includes instructions for:
+
+*   Building wheels locally with Docker
+*   Automated builds with GitHub Actions
+*   Support for x86_64 and ARM64 (Raspberry Pi) architectures
+*   Python 3.9 through 3.13 support
+
 ## Framework
 
 To start using MediaPipe Framework, [install MediaPipe
