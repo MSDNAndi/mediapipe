@@ -163,7 +163,13 @@ The version number is automatically extracted from `mediapipe/version.bzl` durin
 
 ### Where to Store Built Wheels
 
-Built wheels are placed in the `wheelhouse/` directory (which is in `.gitignore`). You can:
+Built wheels are placed in the `wheelhouse/` directory (which is in `.gitignore`). 
+
+**Wheel size expectations:**
+- x86_64 wheels: ~50-80 MB per wheel
+- ARM64 wheels: ~40-70 MB per wheel
+
+You can:
 
 1. **Use them locally**: Install directly from the wheelhouse directory
 2. **Share them**: Copy to a shared location, upload to a private repository, or distribute as needed
