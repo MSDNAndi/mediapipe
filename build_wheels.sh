@@ -47,47 +47,43 @@ case $PYTHON_VERSION in
     ;;
 esac
 
-echo "Building MediaPipe wheel for $PLATFORM with Python $PYTHON_BIN_VERSION"
-echo "=================================================="
+printf "Building MediaPipe wheel for %s with Python %s\n" "$PLATFORM" "$PYTHON_BIN_VERSION"
+printf "==================================================\n"
 
 if [ "$PLATFORM" == "x86_64" ]; then
   DOCKERFILE="Dockerfile.manylinux_2_28_x86_64"
   IMAGE_TAG="mp_manylinux_${PYTHON_VERSION}"
-  
-  echo "Building Docker image..."
+
+  printf "Building Docker image...\n"
   DOCKER_BUILDKIT=1 docker build \
-    -f $DOCKERFILE \
-    -t $IMAGE_TAG:latest \
-    --build-arg PYTHON_BIN=/opt/python/${PYTHON_VERSION}/bin/python${PYTHON_BIN_VERSION} \
+    -f "$DOCKERFILE" \
+    -t "$IMAGE_TAG":latest \
+    --build-arg PYTHON_BIN="/opt/python/${PYTHON_VERSION}/bin/python${PYTHON_BIN_VERSION}" \
     .
-  
 elif [ "$PLATFORM" == "aarch64" ]; then
   DOCKERFILE="Dockerfile.manylinux2014_aarch64rp4"
   IMAGE_TAG="mp_manylinux_aarch64rp4"
-  
-  echo "Building Docker image for ARM64 (this may take a while)..."
+
+  printf "Building Docker image for ARM64 (this may take a while)...\n"
   docker build \
-    -f $DOCKERFILE \
-    -t $IMAGE_TAG:latest \
+    -f "$DOCKERFILE" \
+    -t "$IMAGE_TAG":latest \
     .
-  
+
 else
-  echo "Unknown platform: $PLATFORM"
-  echo "Supported platforms: x86_64, aarch64"
+  printf "Unknown platform: %s\n" "$PLATFORM"
+  printf "Supported platforms: x86_64, aarch64\n"
   exit 1
 fi
 
-echo ""
-echo "Extracting wheel from container..."
-docker create -ti --name mp_pip_package_container $IMAGE_TAG:latest
+printf "\nExtracting wheel from container...\n"
+docker create -ti --name mp_pip_package_container "$IMAGE_TAG":latest
 mkdir -p wheelhouse
 docker cp mp_pip_package_container:/wheelhouse/. wheelhouse/
 docker rm -f mp_pip_package_container
 
-echo ""
-echo "Build complete! Wheels are in the wheelhouse/ directory:"
+printf "\nBuild complete! Wheels are in the wheelhouse/ directory:\n"
 ls -lh wheelhouse/
 
-echo ""
-echo "To install the wheel, run:"
-echo "  pip install wheelhouse/*.whl"
+printf "\nTo install the wheel, run:\n"
+printf "  pip install wheelhouse/*.whl\n"

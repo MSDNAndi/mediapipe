@@ -1,6 +1,7 @@
+---
 name: Build Python Wheels
 
-on:
+"on":
   push:
     tags:
       - 'v*'
@@ -11,47 +12,54 @@ on:
         required: false
         default: 'cp312-cp312'
       platforms:
-        description: 'Platforms to build (comma-separated: x86_64,aarch64)'
+        description: 'Platforms to build (comma-separated)'
         required: false
         default: 'x86_64'
 
 jobs:
   build-wheels-x86_64:
-    if: contains(github.event.inputs.platforms, 'x86_64') || github.event_name == 'push'
+    if: |
+      github.event_name == 'push' ||
+      (github.event.inputs.platforms != null &&
+       contains(github.event.inputs.platforms, 'x86_64'))
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python_version: 
-          - { identifier: 'cp39-cp39', version: '3.9' }
-          - { identifier: 'cp310-cp310', version: '3.10' }
-          - { identifier: 'cp311-cp311', version: '3.11' }
-          - { identifier: 'cp312-cp312', version: '3.12' }
-          - { identifier: 'cp313-cp313', version: '3.13' }
-    
+        python_version:
+          - {identifier: 'cp39-cp39', version: '3.9'}
+          - {identifier: 'cp310-cp310', version: '3.10'}
+          - {identifier: 'cp311-cp311', version: '3.11'}
+          - {identifier: 'cp312-cp312', version: '3.12'}
+          - {identifier: 'cp313-cp313', version: '3.13'}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Build wheel for Python ${{ matrix.python_version.version }}
         run: |
           DOCKER_BUILDKIT=1 docker build \
             -f Dockerfile.manylinux_2_28_x86_64 \
             -t mp_manylinux_${{ matrix.python_version.identifier }}:latest \
-            --build-arg PYTHON_BIN=/opt/python/${{ matrix.python_version.identifier }}/bin/python${{ matrix.python_version.version }} \
+            --build-arg PYTHON_BIN=/opt/python/${{
+              matrix.python_version.identifier
+            }}/bin/python${{ matrix.python_version.version }} \
             .
-      
+
       - name: Extract wheel from container
         run: |
-          docker create -ti --name mp_pip_package_container mp_manylinux_${{ matrix.python_version.identifier }}:latest
-          docker cp mp_pip_package_container:/wheelhouse/. wheelhouse/
-          docker rm -f mp_pip_package_container
-      
+          CONTAINER_NAME="mp_pip_package_container"
+          IMAGE_TAG="mp_manylinux_${{ matrix.python_version.identifier }}"
+          docker create -ti --name ${CONTAINER_NAME} ${IMAGE_TAG}:latest
+          docker cp ${CONTAINER_NAME}:/wheelhouse/. wheelhouse/
+          docker rm -f ${CONTAINER_NAME}
+
       - name: List generated wheels
         run: ls -la wheelhouse/
-      
+
       - name: Upload wheels as artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -60,37 +68,42 @@ jobs:
           retention-days: 7
 
   build-wheels-aarch64:
-    if: contains(github.event.inputs.platforms, 'aarch64') || github.event_name == 'push'
+    if: |
+      github.event_name == 'push' ||
+      (github.event.inputs.platforms != null &&
+       contains(github.event.inputs.platforms, 'aarch64'))
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
           platforms: arm64
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Build wheel for aarch64 (Raspberry Pi)
         run: |
           docker build \
             -f Dockerfile.manylinux2014_aarch64rp4 \
             -t mp_manylinux_aarch64rp4:latest \
             .
-      
+
       - name: Extract wheel from container
         run: |
-          docker create -ti --name mp_pip_package_container mp_manylinux_aarch64rp4:latest
-          docker cp mp_pip_package_container:/wheelhouse/. wheelhouse/
-          docker rm -f mp_pip_package_container
-      
+          CONTAINER_NAME="mp_pip_package_container"
+          IMAGE_TAG="mp_manylinux_aarch64rp4"
+          docker create -ti --name ${CONTAINER_NAME} ${IMAGE_TAG}:latest
+          docker cp ${CONTAINER_NAME}:/wheelhouse/. wheelhouse/
+          docker rm -f ${CONTAINER_NAME}
+
       - name: List generated wheels
         run: ls -la wheelhouse/
-      
+
       - name: Upload wheels as artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -102,22 +115,22 @@ jobs:
     needs: [build-wheels-x86_64, build-wheels-aarch64]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    
+
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: all-wheels
-      
+
       - name: Display structure of downloaded files
         run: ls -R all-wheels
-      
+
       - name: Prepare wheels for release
         run: |
           mkdir -p release-wheels
           find all-wheels -name "*.whl" -exec cp {} release-wheels/ \;
           ls -la release-wheels/
-      
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
