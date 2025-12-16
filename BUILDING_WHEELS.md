@@ -1,67 +1,55 @@
 # Building MediaPipe Python Wheels
 
-This document describes how to build prebuilt MediaPipe Python wheels for distribution.
+This document describes how to build MediaPipe Python wheels locally using Docker.
 
 ## Overview
 
-MediaPipe provides Docker-based build systems for creating manylinux-compatible Python wheels that can be distributed on PyPI or used locally. The wheels are built using:
+MediaPipe provides Docker-based build systems for creating manylinux-compatible Python wheels. The wheels are built using:
 
 - **manylinux_2_28_x86_64**: For x86_64 Linux systems (most desktop/server Linux)
 - **manylinux2014_aarch64**: For ARM64 systems (Raspberry Pi, etc.)
 
 ## Quick Start
 
-### Automated Build with GitHub Actions
-
-The easiest way to build wheels is using the GitHub Actions workflow:
-
-1. **For tagged releases** (automatic):
-   ```bash
-   git tag v0.10.30
-   git push origin v0.10.30
-   ```
-   This will automatically build wheels for all supported Python versions (3.9-3.13) and create a GitHub release with the wheels attached.
-
-2. **For manual builds** (via workflow dispatch):
-   - Go to the "Actions" tab in GitHub
-   - Select "Build Python Wheels"
-   - Click "Run workflow"
-   - Choose the Python version and platform(s) to build
-   - Download the artifacts after the build completes
-
-### Local Build with Docker
-
-To build wheels locally:
+To build wheels locally using the provided script:
 
 ```bash
 # Build for x86_64 with Python 3.12 (default)
 ./build_wheels.sh
 
 # Build for x86_64 with Python 3.11
-./build_wheels.sh x86_64 cp311-cp311
+./build_wheels.sh 3.11
 
-# Build for ARM64 (Raspberry Pi)
-./build_wheels.sh aarch64
+# Build for x86_64 with Python 3.9
+./build_wheels.sh 3.9 x86_64
+
+# Build for ARM64 (Raspberry Pi) with Python 3.12
+./build_wheels.sh 3.12 aarch64
 ```
 
 The wheels will be placed in the `wheelhouse/` directory.
 
-#### Supported Python Versions
+### Supported Python Versions
 
-- `cp39-cp39` - Python 3.9
-- `cp310-cp310` - Python 3.10
-- `cp311-cp311` - Python 3.11
-- `cp312-cp312` - Python 3.12
-- `cp313-cp313` - Python 3.13
+- Python 3.9
+- Python 3.10
+- Python 3.11
+- Python 3.12 (default)
+- Python 3.13
+
+### Supported Platforms
+
+- **x86_64** (default) - Standard Linux desktop/server
+- **aarch64** - ARM64 systems like Raspberry Pi
 
 ## Manual Build Process
 
-If you want more control over the build process:
+If you prefer more control over the build process or want to customize it:
 
 ### Building for x86_64
 
 ```bash
-# Build the Docker image
+# Build the Docker image for Python 3.12
 DOCKER_BUILDKIT=1 docker build \
   -f Dockerfile.manylinux_2_28_x86_64 \
   -t mp_manylinux:latest \
@@ -74,13 +62,19 @@ docker cp mp_pip_package_container:/wheelhouse/. wheelhouse/
 docker rm -f mp_pip_package_container
 ```
 
+For different Python versions, change the `--build-arg` parameter:
+- Python 3.9: `PYTHON_BIN=/opt/python/cp39-cp39/bin/python3.9`
+- Python 3.10: `PYTHON_BIN=/opt/python/cp310-cp310/bin/python3.10`
+- Python 3.11: `PYTHON_BIN=/opt/python/cp311-cp311/bin/python3.11`
+- Python 3.13: `PYTHON_BIN=/opt/python/cp313-cp313/bin/python3.13`
+
 ### Building for ARM64 (Raspberry Pi)
 
 ```bash
-# Set up QEMU for cross-compilation (if building on x86_64)
+# Set up QEMU for cross-compilation (only needed if building on x86_64)
 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-# Build the Docker image
+# Build the Docker image (Python 3.12 is hardcoded in this Dockerfile)
 docker build \
   -f Dockerfile.manylinux2014_aarch64rp4 \
   -t mp_manylinux_aarch64rp4:latest \
@@ -91,6 +85,8 @@ docker create -ti --name mp_pip_package_container mp_manylinux_aarch64rp4:latest
 docker cp mp_pip_package_container:/wheelhouse/. wheelhouse/
 docker rm -f mp_pip_package_container
 ```
+
+**Note:** The ARM64 Dockerfile currently only builds for Python 3.12. To build for other Python versions, you'll need to modify the Dockerfile.
 
 ## Installation
 
@@ -112,17 +108,11 @@ The wheels include:
 
 ## Requirements
 
-### For Local Builds
-
 - Docker (with BuildKit support for x86_64 builds)
 - For ARM builds on x86_64: QEMU user-mode emulation
 - At least 10GB of free disk space
 - 8GB+ RAM recommended
-
-### For GitHub Actions Builds
-
-- Push access to the repository
-- GitHub Actions enabled
+- Build time: 30-60 minutes for x86_64, 2-4 hours for ARM64
 
 ## Troubleshooting
 
@@ -170,6 +160,18 @@ The version number is automatically extracted from `mediapipe/version.bzl` durin
 
 1. Edit `mediapipe/version.bzl`
 2. Rebuild the wheel
+
+### Where to Store Built Wheels
+
+Built wheels are placed in the `wheelhouse/` directory (which is in `.gitignore`). You can:
+
+1. **Use them locally**: Install directly from the wheelhouse directory
+2. **Share them**: Copy to a shared location, upload to a private repository, or distribute as needed
+3. **Upload to PyPI**: If you have appropriate credentials and permissions:
+   ```bash
+   pip install twine
+   twine upload wheelhouse/*.whl
+   ```
 
 ## Contributing
 

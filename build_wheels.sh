@@ -14,51 +14,51 @@
 # limitations under the License.
 
 # Script to build MediaPipe Python wheels locally using Docker
-# Usage: ./build_wheels.sh [PLATFORM] [PYTHON_VERSION]
+# Usage: ./build_wheels.sh [PYTHON_VERSION] [PLATFORM]
+#   PYTHON_VERSION: 3.9, 3.10, 3.11, 3.12 (default), or 3.13
 #   PLATFORM: x86_64 (default), aarch64
-#   PYTHON_VERSION: cp312-cp312 (default), cp39-cp39, cp310-cp310, cp311-cp311, cp313-cp313
 
 set -e
 
-PLATFORM=${1:-x86_64}
-PYTHON_VERSION=${2:-cp312-cp312}
+PYTHON_VERSION=${1:-3.12}
+PLATFORM=${2:-x86_64}
 
-# Map Python version identifiers to actual versions
+# Map Python version to identifiers
 case $PYTHON_VERSION in
-  cp39-cp39)
-    PYTHON_BIN_VERSION="3.9"
+  3.9)
+    PYTHON_IDENTIFIER="cp39-cp39"
     ;;
-  cp310-cp310)
-    PYTHON_BIN_VERSION="3.10"
+  3.10)
+    PYTHON_IDENTIFIER="cp310-cp310"
     ;;
-  cp311-cp311)
-    PYTHON_BIN_VERSION="3.11"
+  3.11)
+    PYTHON_IDENTIFIER="cp311-cp311"
     ;;
-  cp312-cp312)
-    PYTHON_BIN_VERSION="3.12"
+  3.12)
+    PYTHON_IDENTIFIER="cp312-cp312"
     ;;
-  cp313-cp313)
-    PYTHON_BIN_VERSION="3.13"
+  3.13)
+    PYTHON_IDENTIFIER="cp313-cp313"
     ;;
   *)
-    echo "Unknown Python version: $PYTHON_VERSION"
-    echo "Supported versions: cp39-cp39, cp310-cp310, cp311-cp311, cp312-cp312, cp313-cp313"
+    printf "Unknown Python version: %s\n" "$PYTHON_VERSION"
+    printf "Supported versions: 3.9, 3.10, 3.11, 3.12, 3.13\n"
     exit 1
     ;;
 esac
 
-printf "Building MediaPipe wheel for %s with Python %s\n" "$PLATFORM" "$PYTHON_BIN_VERSION"
+printf "Building MediaPipe wheel for %s with Python %s\n" "$PLATFORM" "$PYTHON_VERSION"
 printf "==================================================\n"
 
 if [ "$PLATFORM" == "x86_64" ]; then
   DOCKERFILE="Dockerfile.manylinux_2_28_x86_64"
-  IMAGE_TAG="mp_manylinux_${PYTHON_VERSION}"
+  IMAGE_TAG="mp_manylinux_${PYTHON_IDENTIFIER}"
 
   printf "Building Docker image...\n"
   DOCKER_BUILDKIT=1 docker build \
     -f "$DOCKERFILE" \
     -t "$IMAGE_TAG":latest \
-    --build-arg PYTHON_BIN="/opt/python/${PYTHON_VERSION}/bin/python${PYTHON_BIN_VERSION}" \
+    --build-arg PYTHON_BIN="/opt/python/${PYTHON_IDENTIFIER}/bin/python${PYTHON_VERSION}" \
     .
 elif [ "$PLATFORM" == "aarch64" ]; then
   DOCKERFILE="Dockerfile.manylinux2014_aarch64rp4"
